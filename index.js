@@ -6,21 +6,27 @@ const esClient = new elasticsearch.Client({
   log: 'trace'
 });
 
-const parser = csv({ objectMode: true, columns: true, newline: '\r\n' }, function (err, result) {
-  if (err) throw err;
-  // our csv has been parsed succesfully
-  result.forEach(function (line) {
-    esClient.index({
-      index: 'gb_products',
-      type: 'product',
-      body: line
-    }, function (error, response) {
-      if (error) throw error;
+esClient.indices.delete({index: 'gb_products'}).then(function(){
+    esClient.indices.create({index: 'gb_products'}).then(function(){
+      console.log('index created');
 
-      console.log(response);
+      const parser = csv({ objectMode: true, columns: true, newline: '\r\n' }, function (err, result) {
+        if (err) throw err;
+        // our csv has been parsed succesfully
+        result.forEach(function (line) {
+          esClient.index({
+            index: 'gb_products',
+            type: 'product',
+            body: line
+          }, function (error, response) {
+            if (error) throw error;
+
+            console.log(response);
+          });
+        });
+      });
+
+      // now pipe some data into it
+      fs.createReadStream('/Users/ageorgin/Downloads/gb_product_list.csv').pipe(parser);
     });
-  });
 });
-
-// now pipe some data into it
-fs.createReadStream('/Users/ageorgin/Downloads/gb_product_list.csv').pipe(parser);
